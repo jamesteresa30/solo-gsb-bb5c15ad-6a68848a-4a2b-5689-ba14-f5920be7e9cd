@@ -246,6 +246,23 @@ header h1 {
   border: 1px solid var(--warn-border);
 }
 
+.notice-ok {
+  background: #e8f6ef;
+  border: 1px solid #9fd6b9;
+}
+
+.notice-ok > strong {
+  color: var(--green);
+}
+
+.notice-error > strong {
+  color: var(--red);
+}
+
+.notice-warn > strong {
+  color: #9a6c0f;
+}
+
 .notice p {
   margin: 6px 0;
   line-height: 1.7;
@@ -606,4 +623,49 @@ footer {
       'fields'
       'msgs';
   }
+}
+
+/* ---- 实验观测核验 ---- */
+.obs-section {
+  border-top-style: dashed;
+}
+
+.obs-feed-range {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  background: #f0f4fb;
+  border-radius: 4px;
+  padding: 1px 8px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.obs-btn {
+  background: var(--blue);
+}
+
+.obs-btn:hover:not(:disabled) {
+  background: var(--blue-dark);
+  filter: none;
+}
+
+.obs-verdict {
+  margin-top: 12px;
+}
+
+.obs-verdict p {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.obs-reasons {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+.obs-verdict .feed-table {
+  margin-top: 10px;
 }

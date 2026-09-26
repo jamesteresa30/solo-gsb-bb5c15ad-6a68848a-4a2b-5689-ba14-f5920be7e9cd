@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import FormulaText from './FormulaText.jsx';
-import FeedAnalysis from './FeedAnalysis.jsx';
+import BalanceTools from './BalanceTools.jsx';
 
 const EXAMPLES = [
   { name: '氢气燃烧', left: ['H2', 'O2'], right: ['H2O'] },
@@ -227,10 +227,10 @@ export default function App() {
           </table>
 
           {/*
-            投料区间分析仅对唯一正系数解开放；key 随反应式变化，
+            投料区间分析 / 实验观测核验均仅对唯一正系数解开放；key 随反应式变化，
             一旦修改反应式（含增删物质、载入示例）即整体重挂载，清除投料输入与结果。
           */}
-          <FeedAnalysis
+          <BalanceTools
             key={`${left.map((f) => f.trim()).join('|')}#${right.map((f) => f.trim()).join('|')}`}
             left={left.map((f) => f.trim())}
             right={right.map((f) => f.trim())}

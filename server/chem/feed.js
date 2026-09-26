@@ -17,10 +17,10 @@ const ZERO = new Frac(0n);
 // 非负十进制：整数部分最多 12 位（不许前导零），小数部分最多 6 位。
 const BOUND_RE = /^(0|[1-9]\d{0,11})(?:\.(\d{1,6}))?$/;
 
-/** 解析投料量字符串为精确分数；非法时抛出带中文说明的 Error。 */
-export function parseBound(raw) {
+/** 解析投料量/观测量字符串为精确分数；非法时抛出带中文说明的 Error。 */
+export function parseBound(raw, label = '投料量') {
   if (typeof raw !== 'string' || raw.trim() === '') {
-    throw new Error('请输入投料量（mol）');
+    throw new Error(`请输入${label}（mol）`);
   }
   const s = raw.trim();
   const m = BOUND_RE.exec(s);

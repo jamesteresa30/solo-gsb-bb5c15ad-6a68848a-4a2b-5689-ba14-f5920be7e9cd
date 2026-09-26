@@ -1,23 +1,12 @@
 import { useState } from 'react';
 import FormulaText from './FormulaText.jsx';
+import FracText from './FracText.jsx';
 
 const LIMIT_META = {
   always: { text: '均限量', cls: 'limit-always', hint: '在所有允许投料组合中都是限量反应物' },
   partial: { text: '部分限量', cls: 'limit-partial', hint: '仅在部分允许投料组合中是限量反应物' },
   never: { text: '从不限量', cls: 'limit-never', hint: '在所有允许投料组合中都不是限量反应物' },
 };
-
-function FracText({ v }) {
-  // 约分分数（服务端已约分）：整数直接显示，否则分子/分母竖排
-  if (v.den === '1') return <span className="frac-int">{v.num}</span>;
-  return (
-    <span className="frac">
-      <span className="frac-num">{v.num}</span>
-      <span className="frac-bar" />
-      <span className="frac-den">{v.den}</span>
-    </span>
-  );
-}
 
 function RangeRow({ index, formula, coefficient, rg, errors, onChange }) {
   const errLower = errors.find((e) => e.field === 'lower');
@@ -68,17 +57,15 @@ function RangeRow({ index, formula, coefficient, rg, errors, onChange }) {
   );
 }
 
-export default function FeedAnalysis({ left, right, coefficients }) {
-  const [ranges, setRanges] = useState(() =>
-    left.map(() => ({ lower: '', upper: '' }))
-  );
+// ranges / onRangesChange 由父组件托管：观测核验区沿用同一组投料区间。
+export default function FeedAnalysis({ left, right, coefficients, ranges, onRangesChange }) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
   const [errors, setErrors] = useState([]);
   const [networkError, setNetworkError] = useState('');
 
   const setField = (index, field, value) => {
-    setRanges((list) => list.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+    onRangesChange(index, field, value);
     // 修改投料即清除上一次分析结果
     setData(null);
     setErrors([]);
