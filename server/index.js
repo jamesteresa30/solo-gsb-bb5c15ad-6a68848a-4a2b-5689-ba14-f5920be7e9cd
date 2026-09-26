@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { parseFormula, ParseError } from './chem/parse.js';
 import { balanceEquation } from './chem/balance.js';
 import { parseBound, analyzeFeed } from './chem/feed.js';
+import { checkObservations } from './chem/observe.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -59,6 +60,107 @@ function parseSides(body) {
   return { errors, parsed };
 }
 
+/**
+ * 校验反应物投料区间（数量必须与反应物一致）。
+ * 返回 { errors, ranges }：errors 为空时 ranges 为 [{ lower: Frac, upper: Frac }]。
+ */
+function parseFeedRanges(rawRanges, count) {
+  if (!Array.isArray(rawRanges) || rawRanges.length !== count) {
+    return {
+      errors: [
+        { side: 'left', index: -1, field: null, message: '投料区间数量必须与反应物数量一致' },
+      ],
+      ranges: null,
+    };
+  }
+  const errors = [];
+  const ranges = rawRanges.map((rg, i) => {
+    const push = (field, message) =>
+      errors.push({ side: 'left', index: i, field, message });
+
+    if (rg === null || typeof rg !== 'object') {
+      push(null, '投料区间格式不正确');
+      return null;
+    }
+    let lower;
+    let upper;
+    try {
+      lower = parseBound(rg.lower);
+    } catch (e) {
+      push('lower', `下限无效：${e.message}`);
+    }
+    try {
+      upper = parseBound(rg.upper);
+    } catch (e) {
+      push('upper', `上限无效：${e.message}`);
+    }
+    if (lower !== undefined && upper !== undefined && upper.sub(lower).sign() < 0) {
+      push('upper', '上限不能小于下限');
+    }
+    return lower !== undefined && upper !== undefined ? { lower, upper } : null;
+  });
+  return { errors: errors.length ? errors : [], ranges: errors.length ? null : ranges };
+}
+
+/**
+ * 校验实验观测区间。side 为 'left'（剩余量）或 'right'（生成量）；
+ * 每项 { lower, upper }：两者留空（null/缺失/空串）表示未观测；
+ * 必须成对出现，非空值与投料量同样受 parseBound 约束，且下限 ≤ 上限。
+ * 返回的区间未观测时为 { lower: null, upper: null }。
+ */
+function parseObservationList(rawList, count, side) {
+  const errors = [];
+  if (!Array.isArray(rawList) || rawList.length !== count) {
+    return {
+      errors: [
+        {
+          side,
+          index: -1,
+          field: null,
+          scope: 'observation',
+          message: '观测区间数量必须与物质数量一致',
+        },
+      ],
+      list: null,
+    };
+  }
+  const blank = (v) => v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+
+  const list = rawList.map((rg, i) => {
+    const push = (field, message) =>
+      errors.push({ side, index: i, field, scope: 'observation', message });
+
+    if (rg === null || typeof rg !== 'object') {
+      push(null, '观测区间格式不正确');
+      return null;
+    }
+    if (blank(rg.lower) && blank(rg.upper)) {
+      return { lower: null, upper: null }; // 未观测
+    }
+    if (blank(rg.lower) || blank(rg.upper)) {
+      push(blank(rg.lower) ? 'lower' : 'upper', '观测区间的下限与上限必须同时填写（都留空表示未观测）');
+      return null;
+    }
+    let lower;
+    let upper;
+    try {
+      lower = parseBound(rg.lower);
+    } catch (e) {
+      push('lower', `观测下限无效：${e.message}`);
+    }
+    try {
+      upper = parseBound(rg.upper);
+    } catch (e) {
+      push('upper', `观测上限无效：${e.message}`);
+    }
+    if (lower !== undefined && upper !== undefined && upper.sub(lower).sign() < 0) {
+      push('upper', '观测上限不能小于下限');
+    }
+    return lower !== undefined && upper !== undefined ? { lower, upper } : null;
+  });
+  return { errors: errors.length ? errors : [], list: errors.length ? null : list };
+}
+
 app.post('/api/balance', (req, res) => {
   const { errors, parsed } = parseSides(req.body ?? {});
   if (errors.length > 0) return res.json({ ok: false, errors });
@@ -92,47 +194,9 @@ app.post('/api/feed-analysis', (req, res) => {
   }
 
   // 区间按物质定位：每侧/每个物质独立校验
-  const rangeErrors = [];
-  const rawRanges = body.ranges;
-  if (!Array.isArray(rawRanges) || rawRanges.length !== parsed.left.length) {
-    rangeErrors.push({
-      side: 'left',
-      index: -1,
-      field: null,
-      message: '投料区间数量必须与反应物数量一致',
-    });
-  } else {
-    rawRanges.forEach((rg, i) => {
-      const push = (field, message) =>
-        rangeErrors.push({ side: 'left', index: i, field, message });
-
-      if (rg === null || typeof rg !== 'object') {
-        push(null, '投料区间格式不正确');
-        return;
-      }
-      let lower;
-      let upper;
-      try {
-        lower = parseBound(rg.lower);
-      } catch (e) {
-        push('lower', `下限无效：${e.message}`);
-      }
-      try {
-        upper = parseBound(rg.upper);
-      } catch (e) {
-        push('upper', `上限无效：${e.message}`);
-      }
-      if (lower !== undefined && upper !== undefined && upper.sub(lower).sign() < 0) {
-        push('upper', '上限不能小于下限');
-      }
-    });
-  }
+  const { errors: rangeErrors, ranges } = parseFeedRanges(body.ranges, parsed.left.length);
   if (rangeErrors.length > 0) return res.json({ ok: false, errors: rangeErrors });
 
-  const ranges = rawRanges.map((rg) => ({
-    lower: parseBound(rg.lower),
-    upper: parseBound(rg.upper),
-  }));
   const analysis = analyzeFeed(result.coefficients.left, result.coefficients.right, ranges);
 
   res.json({
@@ -141,6 +205,80 @@ app.post('/api/feed-analysis', (req, res) => {
       status: 'balanced',
       coefficients: result.coefficients,
       analysis,
+    },
+  });
+});
+
+// 实验观测核验：沿用配平结果与投料区间，在“同一组”投料与反应进度下
+// 联合判断各生成物生成量、各反应物剩余量的观测闭区间能否同时满足，
+// 且至少一种反应物剩余为 0（完全反应）。仅在 balanced 时开放。
+app.post('/api/observe-check', (req, res) => {
+  const body = req.body ?? {};
+  const { errors, parsed } = parseSides(body);
+  if (errors.length > 0) return res.json({ ok: false, errors });
+
+  const result = balanceEquation(parsed.left, parsed.right);
+  if (result.status !== 'balanced') {
+    return res.json({
+      ok: false,
+      errors: [
+        {
+          side: 'left',
+          index: -1,
+          position: null,
+          message:
+            result.status === 'not-unique'
+              ? '该反应配平系数不唯一，实验观测核验仅对唯一正系数解开放'
+              : '该反应无全部为正的配平系数，无法进行实验观测核验',
+        },
+      ],
+    });
+  }
+
+  // 投料区间是核验的前提：必须先给出完整且合法的各反应物投料闭区间。
+  const { errors: rangeErrors, ranges } = parseFeedRanges(body.ranges, parsed.left.length);
+  if (rangeErrors.length > 0) {
+    rangeErrors.unshift({
+      side: 'left',
+      index: -1,
+      field: null,
+      scope: 'feed',
+      message: '实验观测核验沿用上方各反应物的投料区间，请先补全并修正投料区间',
+    });
+    return res.json({ ok: false, errors: rangeErrors });
+  }
+
+  const { errors: obsErrors, list: reactants } = parseObservationList(
+    body.observations?.reactants,
+    parsed.left.length,
+    'left'
+  );
+  const { errors: prodErrors, list: products } = parseObservationList(
+    body.observations?.products,
+    parsed.right.length,
+    'right'
+  );
+  if (obsErrors.length > 0 || prodErrors.length > 0) {
+    return res.json({ ok: false, errors: [...obsErrors, ...prodErrors] });
+  }
+
+  const verdict = checkObservations(
+    result.coefficients.left,
+    result.coefficients.right,
+    ranges,
+    { reactants, products },
+    {
+      reactants: parsed.left.map((_, i) => body.left[i].trim()),
+      products: parsed.right.map((_, i) => body.right[i].trim()),
+    }
+  );
+
+  res.json({
+    ok: true,
+    result: {
+      status: 'balanced',
+      coefficients: result.coefficients,
+      verdict,
     },
   });
 });

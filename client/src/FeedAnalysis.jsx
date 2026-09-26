@@ -1,23 +1,13 @@
 import { useState } from 'react';
 import FormulaText from './FormulaText.jsx';
+import FracText from './FracText.jsx';
+import ObservationCheck from './ObservationCheck.jsx';
 
 const LIMIT_META = {
   always: { text: '均限量', cls: 'limit-always', hint: '在所有允许投料组合中都是限量反应物' },
   partial: { text: '部分限量', cls: 'limit-partial', hint: '仅在部分允许投料组合中是限量反应物' },
   never: { text: '从不限量', cls: 'limit-never', hint: '在所有允许投料组合中都不是限量反应物' },
 };
-
-function FracText({ v }) {
-  // 约分分数（服务端已约分）：整数直接显示，否则分子/分母竖排
-  if (v.den === '1') return <span className="frac-int">{v.num}</span>;
-  return (
-    <span className="frac">
-      <span className="frac-num">{v.num}</span>
-      <span className="frac-bar" />
-      <span className="frac-den">{v.den}</span>
-    </span>
-  );
-}
 
 function RangeRow({ index, formula, coefficient, rg, errors, onChange }) {
   const errLower = errors.find((e) => e.field === 'lower');
@@ -231,6 +221,13 @@ export default function FeedAnalysis({ left, right, coefficients }) {
           </div>
         </div>
       )}
+
+      <ObservationCheck
+        left={left}
+        right={right}
+        coefficients={coefficients}
+        ranges={ranges}
+      />
     </div>
   );
 }

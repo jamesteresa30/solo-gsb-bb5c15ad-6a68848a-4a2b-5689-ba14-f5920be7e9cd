@@ -607,3 +607,120 @@ footer {
       'msgs';
   }
 }
+
+/* ---- 实验观测核验 ---- */
+.obs-section {
+  margin-top: 22px;
+  border-top: 1px dashed var(--line);
+  padding-top: 16px;
+}
+
+.obs-section h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.obs-group-label {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.obs-row {
+  border-left: 3px solid var(--green);
+}
+
+.observe-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.observe-btn:hover:not(:disabled) {
+  background: var(--blue-dark);
+}
+
+.observe-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.obs-result {
+  margin-top: 14px;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.obs-feasible {
+  background: #f0f8f4;
+  border: 1px solid #a8d8bd;
+}
+
+.obs-infeasible {
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+}
+
+.obs-empty {
+  margin-top: 14px;
+}
+
+.obs-verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14.5px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.obs-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.obs-badge-ok {
+  background: var(--green);
+  color: #fff;
+}
+
+.obs-badge-bad {
+  background: var(--red);
+  color: #fff;
+}
+
+.obs-badge-empty {
+  background: #f0c36d;
+  color: #6b4d08;
+}
+
+.obs-badge-ex {
+  background: #fde7d9;
+  color: #b34a1e;
+  border: 1px solid #eebc9f;
+}
+
+.obs-conflict {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+tr.witness-exhausted {
+  background: #fde7d9;
+}
+
+tr.witness-exhausted td {
+  font-weight: 600;
+}
+
